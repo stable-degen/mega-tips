@@ -4,7 +4,7 @@ import { QueryClient } from "@tanstack/react-query";
 
 import { megaEthChains, megaEthTestnet } from "@/lib/chains";
 
-const appName = "MegaETH TipJar";
+const appName = "MegaTip";
 
 const walletConnectProjectId =
   process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ??

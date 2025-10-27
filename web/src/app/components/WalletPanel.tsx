@@ -49,7 +49,7 @@ export function WalletPanel() {
         <ConnectButton showBalance={false} chainStatus="icon" label="Connect" />
       </header>
       <p className="text-xs leading-5 text-slate-400">
-        Connect to MegaETH testnet and we&apos;ll auto-detect your TipJar config.
+        Connect to MegaETH testnet and we&apos;ll auto-detect your MegaTip contract.
         Once paired, you can fire off tips, watch the live feed, and check
         stats--all without refreshing.
       </p>

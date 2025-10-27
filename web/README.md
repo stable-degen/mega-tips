@@ -1,6 +1,6 @@
 ## Overview
 
-This Next.js 16 scaffold powers the MegaETH TipJar frontend. It ships with
+This Next.js 16 scaffold powers the MegaTip frontend. It ships with
 TypeScript, Tailwind CSS v4, ESLint, and project-specific helpers under
 `lib/`. The landing page outlines the upcoming wallet connect, live feed, and
 stats modules.
@@ -12,7 +12,7 @@ pnpm install
 pnpm dev
 ```
 
-Visit [http://localhost:3000](http://localhost:3000) to view the placeholder UI.
+Visit [http://localhost:3000](http://localhost:3000) to view the MegaTip placeholder UI.
 Edit `src/app/page.tsx` or the supporting components to iterate on the layout.
 
 ## Project Notes

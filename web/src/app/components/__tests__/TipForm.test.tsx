@@ -112,7 +112,7 @@ describe("TipForm", () => {
     expect(writeContractAsyncMock).not.toHaveBeenCalled();
   });
 
-  it("surfaces a configuration error when the TipJar address is missing", async () => {
+  it("surfaces a configuration error when the MegaTip contract address is missing", async () => {
     const user = userEvent.setup();
     delete process.env.NEXT_PUBLIC_TIPJAR_ADDRESS;
 
@@ -122,7 +122,7 @@ describe("TipForm", () => {
     await user.click(screen.getByRole("button", { name: /send tip/i }));
 
     expect(
-      screen.getByText(/tipjar address is not configured/i),
+      screen.getByText(/megatip contract address is not configured/i),
     ).toBeInTheDocument();
     expect(writeContractAsyncMock).not.toHaveBeenCalled();
   });

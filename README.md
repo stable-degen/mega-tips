@@ -1,6 +1,6 @@
-# TipJar
+# MegaTip
 
-TipJar is a MegaETH testnet dapp that lets creators drop a lightweight tip jar anywhere they share a link. Fans can connect a wallet, send a note with their tip, and watch it appear instantly in a live activity feed.
+MegaTip is a MegaETH testnet dapp that lets creators drop a lightweight tip jar anywhere they share a link. Fans can connect a wallet, send a note with their tip, and watch it appear instantly in a live activity feed.
 
 ## Features
 - **On-chain tips** powered by the `TipJar.sol` contract (Solidity 0.8.x, deployed with Foundry)
@@ -16,7 +16,7 @@ TipJar is a MegaETH testnet dapp that lets creators drop a lightweight tip jar a
 ## Quick Start
 ```bash
 pnpm install --dir web
-pnpm --dir web dev               # start Next.js at http://localhost:3000
+pnpm --dir web dev               # start MegaTip at http://localhost:3000
 ```
 
 Before running the app, review `.env.example` and provide the MegaETH RPC URLs, chain ID, WalletConnect project ID, and TipJar contract address using your preferred environment management (shell exports, direnv, or a private `.env` file kept outside version control).
@@ -41,7 +41,7 @@ To run the smart-contract test suite:
      --mnemonic-derivation-paths "m/44'/60'/0'/0/1" \
      --broadcast
    ```
-4. After confirmation, update your frontend environment variables with the new contract address (`NEXT_PUBLIC_TIPJAR_ADDRESS`).
+4. After confirmation, update your frontend environment variables with the new contract address (`NEXT_PUBLIC_TIPJAR_ADDRESS`) so MegaTip points to the live contract.
 
 > **Heads up:** The public MegaETH faucet is throttled while the network onboards builders. If the faucet UI says “success” but your account still reads 0 MEGA on [OKX MegaETH Explorer](https://www.okx.com/web3/explorer/megaeth-testnet), ping the MegaETH Discord for a manual top-up before redeploying.
 

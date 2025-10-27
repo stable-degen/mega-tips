@@ -169,7 +169,7 @@ export function TipForm() {
     }
 
     if (!tipJarAddress) {
-      setFormError("TipJar address is not configured.");
+      setFormError("MegaTip contract address is not configured.");
       return;
     }
 

@@ -52,7 +52,7 @@ export default function Providers({ children }: ProvidersProps) {
           initialChain={megaEthTestnet}
           theme={theme}
           appInfo={{
-            appName: "MegaETH TipJar",
+            appName: "MegaTip",
           }}
         >
           {children}

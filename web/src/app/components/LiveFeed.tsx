@@ -123,7 +123,7 @@ export function LiveFeed({ maxItems = DEFAULT_FEED_LIMIT }: LiveFeedProps) {
 
       {entries.length === 0 ? (
         <div className="rounded-2xl border border-white/5 bg-white/5 p-6 text-center text-xs text-slate-300">
-          Tips will appear the moment someone contributes. Share your TipJar
+          Tips will appear the moment someone contributes. Share your MegaTip
           link to kickstart the stream.
         </div>
       ) : (

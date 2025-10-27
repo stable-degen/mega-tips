@@ -14,9 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MegaETH TipJar",
-  description:
-    "Real-time tipping dapp scaffold for the MegaETH testnet community.",
+  title: "MegaTip",
+  description: "MegaTip keeps MegaETH tips flowing with real-time updates and a clean UI.",
 };
 
 export default function RootLayout({

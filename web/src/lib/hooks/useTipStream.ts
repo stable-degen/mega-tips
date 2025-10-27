@@ -255,7 +255,7 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
   useEffect(() => {
     if (!contractAddress) {
       setStatus("error");
-      setError("TipJar contract address is not configured.");
+      setError("MegaTip contract address is not configured.");
       return;
     }
 

@@ -11,7 +11,7 @@ export default function Home() {
           <div className="space-y-8">
             <div className="space-y-4">
               <p className="text-sm uppercase tracking-[0.4em] text-emerald-400">
-                MegaETH TipJar
+                MegaTip
               </p>
               <h1 className="text-4xl font-semibold leading-tight sm:text-5xl">
                 Collect real-time support from your community.
@@ -40,7 +40,7 @@ export default function Home() {
                 Share the love
               </h3>
               <p className="mt-3 leading-6">
-                Drop this TipJar in your socials, livestream overlays, or
+                Drop MegaTip in your socials, livestream overlays, or
                 newsletters. Supporters send small amounts of test MEGA, leave a
                 note, and show up instantly in your live feed and stats.
               </p>

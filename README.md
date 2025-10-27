@@ -7,3 +7,8 @@ TipJar is a lightweight MegaETH testnet dapp for on-chain tipping. The repo will
 - Day 2: wire up WebSocket tip streaming, live stats panels, UI polish, env wiring, and prep for launch/announcement.
 
 Additional docs, contract code, and frontend modules will be added as milestones in the outline are completed.
+
+## Environment Setup
+- Copy `.env.example` to `.env.local` (or `.env`) and fill in MegaETH RPC endpoints, chain ID, and the deployed `TipJar` address once available.
+- Reuse the provided `ETH_ACCOUNT_ADDRESS` for local scripts; never commit real private keys.
+- Foundry scripts expect `FOUNDRY_RPC_URL` and `FOUNDRY_PRIVATE_KEY` to be populated before broadcasting deployments.

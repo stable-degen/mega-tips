@@ -94,6 +94,62 @@ describe("TipForm", () => {
     expect(writeContractAsyncMock).not.toHaveBeenCalled();
   });
 
+  it("requires the wallet to be connected before submitting", async () => {
+    const user = userEvent.setup();
+    mockUseAccount.mockReturnValueOnce({
+      address: undefined,
+      isConnected: false,
+    });
+
+    render(<TipForm />);
+
+    expect(
+      screen.getByText(/connect your wallet above to send a tip\./i),
+    ).toBeInTheDocument();
+    expect(writeContractAsyncMock).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: /send tip/i }));
+    expect(writeContractAsyncMock).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a configuration error when the TipJar address is missing", async () => {
+    const user = userEvent.setup();
+    delete process.env.NEXT_PUBLIC_TIPJAR_ADDRESS;
+
+    render(<TipForm />);
+
+    await user.type(screen.getByLabelText(/amount/i), "0.02");
+    await user.click(screen.getByRole("button", { name: /send tip/i }));
+
+    expect(
+      screen.getByText(/tipjar address is not configured/i),
+    ).toBeInTheDocument();
+    expect(writeContractAsyncMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid or zero-value tip amounts", async () => {
+    const user = userEvent.setup();
+
+    render(<TipForm />);
+
+    await user.type(screen.getByLabelText(/amount/i), "not-a-number");
+    await user.click(screen.getByRole("button", { name: /send tip/i }));
+
+    expect(
+      screen.getByText(/enter a valid tip amount in eth/i),
+    ).toBeInTheDocument();
+    expect(writeContractAsyncMock).not.toHaveBeenCalled();
+
+    await user.clear(screen.getByLabelText(/amount/i));
+    await user.type(screen.getByLabelText(/amount/i), "0.000");
+    await user.click(screen.getByRole("button", { name: /send tip/i }));
+
+    expect(
+      screen.getByText(/amount must be greater than 0/i),
+    ).toBeInTheDocument();
+    expect(writeContractAsyncMock).not.toHaveBeenCalled();
+  });
+
   it("submits a tip and shows confirmation flow", async () => {
     const user = userEvent.setup();
     const waitMock = mockUseWaitForTransactionReceipt as WaitMock;

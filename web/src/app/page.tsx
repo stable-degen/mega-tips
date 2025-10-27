@@ -1,3 +1,4 @@
+import { TipForm } from "@/app/components/TipForm";
 import { WalletPanel } from "@/app/components/WalletPanel";
 
 const placeholderTips = [
@@ -25,6 +26,8 @@ export default function Home() {
 
           <WalletPanel />
         </section>
+
+        <TipForm />
 
         <section className="grid gap-4 rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-emerald-300">

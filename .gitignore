@@ -17,6 +17,8 @@ pnpm-debug.log*
 
 # Foundry / Solidity
 lib/
+!web/lib/
+!web/lib/**
 out/
 cache/
 broadcast/

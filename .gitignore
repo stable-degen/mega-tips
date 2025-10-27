@@ -1,0 +1,39 @@
+# Node & Next.js
+node_modules/
+.next/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Foundry / Solidity
+lib/
+out/
+cache/
+broadcast/
+artifacts/
+typechain/
+
+# Static hosting & tooling
+.vercel/
+.netlify/
+
+# Firebase & misc local files
+firebase-debug.log
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Project-specific docs to keep local
+AGENTS.md
+PROJECT_PLAN.md

@@ -66,7 +66,7 @@ jobs:
           version: stable
 
       - name: Install Forge dependencies
-        run: forge install foundry-rs/forge-std --no-commit --quiet
+        run: forge install foundry-rs/forge-std --quiet
 
       - name: Run forge tests
         run: forge test

@@ -85,4 +85,102 @@ contract TipJarTest is Test {
         vm.expectRevert(abi.encodeWithSignature("InvalidRecipient()"));
         tipJar.withdraw(payable(address(0)), 0.5 ether);
     }
+
+    function testFuzz_tip_accepts_notes_within_limit(uint8 length, uint96 amount) public {
+        uint256 boundedLength = bound(uint256(length), 0, tipJar.MAX_NOTE_LENGTH());
+        uint256 sendValue = bound(uint256(amount), 1 wei, 25 ether);
+
+        bytes memory buffer = new bytes(boundedLength);
+        for (uint256 i = 0; i < boundedLength; i++) {
+            buffer[i] = bytes1(uint8(65 + (i % 26)));
+        }
+        string memory note = string(buffer);
+
+        vm.deal(tipper, sendValue);
+        vm.prank(tipper);
+        tipJar.tip{value: sendValue}(note);
+
+        assertEq(tipJar.totalTips(), sendValue);
+        assertEq(tipJar.tipsByUser(tipper), sendValue);
+    }
+
+    function testFuzz_tip_reverts_when_note_exceeds_limit(uint16 extraLength, uint96 amount) public {
+        uint256 sendValue = bound(uint256(amount), 1 wei, 25 ether);
+        uint256 targetLength = tipJar.MAX_NOTE_LENGTH() + 1 + (uint256(extraLength) % 32);
+        bytes memory buffer = new bytes(targetLength);
+        for (uint256 i = 0; i < targetLength; i++) {
+            buffer[i] = 0x61;
+        }
+        string memory note = string(buffer);
+
+        vm.deal(tipper, sendValue);
+        vm.prank(tipper);
+        vm.expectRevert(abi.encodeWithSignature("NoteTooLong()"));
+        tipJar.tip{value: sendValue}(note);
+    }
+
+    function testFuzz_repeated_tipper_accumulates_totals(uint96 firstAmount, uint96 secondAmount) public {
+        uint256 a = bound(uint256(firstAmount), 1 wei, 25 ether);
+        uint256 b = bound(uint256(secondAmount), 1 wei, 25 ether);
+
+        vm.deal(tipper, a + b);
+
+        vm.prank(tipper);
+        tipJar.tip{value: a}("first");
+
+        vm.prank(tipper);
+        tipJar.tip{value: b}("second");
+
+        assertEq(tipJar.totalTips(), a + b);
+        assertEq(tipJar.tipsByUser(tipper), a + b);
+    }
+
+    function testFuzz_withdraw_respects_available_balance(uint96 depositAmount, uint96 withdrawAmount) public {
+        uint256 deposit = bound(uint256(depositAmount), 1 wei, 50 ether);
+        uint256 withdraw = bound(uint256(withdrawAmount), 0, deposit);
+
+        vm.deal(tipper, deposit);
+        vm.prank(tipper);
+        tipJar.tip{value: deposit}("gm");
+
+        uint256 ownerStart = owner.balance;
+        vm.prank(owner);
+        tipJar.withdraw(payable(owner), withdraw);
+
+        assertEq(address(tipJar).balance, deposit - withdraw);
+        assertEq(owner.balance, ownerStart + withdraw);
+    }
+
+    function testFuzz_withdraw_reverts_when_overdrawn(uint96 depositAmount, uint96 withdrawAmount) public {
+        uint256 deposit = bound(uint256(depositAmount), 1 wei, 50 ether);
+        uint256 withdraw = bound(uint256(withdrawAmount), deposit + 1, deposit + 50 ether);
+
+        vm.deal(tipper, deposit);
+        vm.prank(tipper);
+        tipJar.tip{value: deposit}("gm");
+
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSignature("InsufficientBalance()"));
+        tipJar.withdraw(payable(owner), withdraw);
+    }
+
+    function testFuzz_receive_updates_totals(address sender, uint96 amount) public {
+        vm.assume(sender != address(0));
+        vm.assume(sender != owner);
+
+        uint256 value = bound(uint256(amount), 1 wei, 25 ether);
+
+        vm.deal(sender, value);
+
+        vm.expectEmit(true, false, false, true);
+        emit TipJar.Tipped(sender, value, "", block.timestamp);
+
+        vm.prank(sender);
+        (bool success, ) = address(tipJar).call{value: value}("");
+        assertTrue(success);
+
+        assertEq(tipJar.totalTips(), value);
+        assertEq(tipJar.tipsByUser(sender), value);
+        assertEq(address(tipJar).balance, value);
+    }
 }

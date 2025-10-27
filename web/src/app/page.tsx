@@ -1,3 +1,5 @@
+import { WalletPanel } from "@/app/components/WalletPanel";
+
 const placeholderTips = [
   "Connect your wallet to tip in seconds.",
   "Live event stream will pop here once we wire MegaETH realtime.",
@@ -21,18 +23,7 @@ export default function Home() {
             supporters can boost you on the MegaETH testnet.
           </p>
 
-          <div className="flex flex-wrap items-center gap-4">
-            <button
-              type="button"
-              disabled
-              className="rounded-full bg-emerald-500/70 px-6 py-3 text-sm font-medium uppercase tracking-wide text-white transition hover:bg-emerald-500 disabled:opacity-60"
-            >
-              connect wallet (coming soon)
-            </button>
-            <span className="text-xs text-slate-400">
-              Tip flow, live feed, and stats are on the upcoming sprint.
-            </span>
-          </div>
+          <WalletPanel />
         </section>
 
         <section className="grid gap-4 rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur">

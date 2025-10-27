@@ -19,6 +19,8 @@ pnpm-debug.log*
 lib/
 !web/lib/
 !web/lib/**
+!web/src/lib/
+!web/src/lib/**
 out/
 cache/
 broadcast/

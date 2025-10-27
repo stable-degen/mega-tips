@@ -22,3 +22,7 @@ Edit `src/app/page.tsx` or the supporting components to iterate on the layout.
   `src/app/globals.css` for design tokens.
 - `pnpm lint` runs ESLint with the Next.js config and should stay green before
   committing frontend changes.
+- Update `.env.local` with MegaETH values:
+  - `NEXT_PUBLIC_RPC_HTTP` / `NEXT_PUBLIC_RPC_WS`
+  - `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
+- Providers live in `src/app/providers.tsx` and wrap wagmi, RainbowKit, and React Query.

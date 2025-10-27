@@ -1,11 +1,6 @@
+import { LiveFeed } from "@/app/components/LiveFeed";
 import { TipForm } from "@/app/components/TipForm";
 import { WalletPanel } from "@/app/components/WalletPanel";
-
-const placeholderTips = [
-  "Connect your wallet to tip in seconds.",
-  "Live event stream will pop here once we wire MegaETH realtime.",
-  "Stats panel will highlight top supporters and total volume.",
-];
 
 export default function Home() {
   return (
@@ -29,21 +24,7 @@ export default function Home() {
 
         <TipForm />
 
-        <section className="grid gap-4 rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-emerald-300">
-            Up Next
-          </h2>
-          <ul className="grid gap-3 text-sm text-slate-200 sm:grid-cols-2">
-            {placeholderTips.map((item) => (
-              <li
-                key={item}
-                className="rounded-xl border border-white/10 bg-black/30 px-4 py-3"
-              >
-                {item}
-              </li>
-            ))}
-          </ul>
-        </section>
+        <LiveFeed />
 
         <section className="space-y-3 text-sm text-slate-400">
           <h3 className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">

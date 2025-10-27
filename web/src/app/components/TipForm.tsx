@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { parseEther, type Hash } from "viem";
 import {
   useAccount,
@@ -82,6 +82,14 @@ export function TipForm() {
   const [status, setStatus] = useState<StatusState>(defaultStatus);
   const [txHash, setTxHash] = useState<Hash | undefined>();
 
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const sanitizedNote = useMemo(() => note.trim(), [note]);
   const noteLength = note.length;
   const charactersLeft = Math.max(0, MAX_NOTE_LENGTH - noteLength);
@@ -100,32 +108,52 @@ export function TipForm() {
     },
   });
 
+  const scheduleStateUpdate = useCallback((fn: () => void) => {
+    const enqueue =
+      typeof queueMicrotask === "function"
+        ? queueMicrotask
+        : (cb: () => void) => {
+            Promise.resolve().then(cb);
+          };
+
+    enqueue(() => {
+      if (!mountedRef.current) return;
+      fn();
+    });
+  }, []);
+
   useEffect(() => {
     if (!txHash) return;
 
     if (isSuccess) {
-      setStatus({ type: "success", message: "Tip confirmed! Thanks for supporting." });
-      setAmount("");
-      setNote("");
-      setFormError(null);
+      scheduleStateUpdate(() => {
+        setStatus({ type: "success", message: "Tip confirmed! Thanks for supporting." });
+        setAmount("");
+        setNote("");
+        setFormError(null);
+      });
       return;
     }
 
     if (isError) {
-      setStatus({
-        type: "error",
-        message: getReadableErrorMessage(receiptError),
+      scheduleStateUpdate(() => {
+        setStatus({
+          type: "error",
+          message: getReadableErrorMessage(receiptError),
+        });
       });
       return;
     }
 
     if (isConfirming) {
-      setStatus({
-        type: "confirming",
-        message: "Tip submitted. Awaiting confirmation...",
+      scheduleStateUpdate(() => {
+        setStatus({
+          type: "confirming",
+          message: "Tip submitted. Awaiting confirmation...",
+        });
       });
     }
-  }, [isConfirming, isError, isSuccess, receiptError, txHash]);
+  }, [isConfirming, isError, isSuccess, receiptError, scheduleStateUpdate, txHash]);
 
   const isSubmitDisabled =
     !isConnected || isPending || status.type === "submitting" || status.type === "confirming";

@@ -1,9 +1,11 @@
 import { act, renderHook } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { encodeAbiParameters, encodeEventTopics, type Hex } from "viem";
 
 import { tipJarAbi } from "@/lib/abis/TipJar";
 import { useTipStream } from "../useTipStream";
+import { TransportControlsProvider } from "@/lib/transportControls";
 
 type MockMessageEvent = {
   data: string;
@@ -53,6 +55,9 @@ beforeEach(() => {
   (globalThis as unknown as { WebSocket: typeof WebSocket }).WebSocket = MockWebSocket as unknown as typeof WebSocket;
   globalThis.fetch = vi.fn();
   MockWebSocket.instances = [];
+  if (typeof window !== "undefined" && window.localStorage) {
+    window.localStorage.clear();
+  }
 });
 
 afterEach(() => {
@@ -61,7 +66,11 @@ afterEach(() => {
   globalThis.fetch = originalFetch;
   delete process.env.NEXT_PUBLIC_REALTIME_WS;
   delete process.env.NEXT_PUBLIC_RPC_HTTP;
+  delete process.env.NEXT_PUBLIC_TRANSPORT_SLIDER_MODE;
   MockWebSocket.instances = [];
+  if (typeof window !== "undefined" && window.localStorage) {
+    window.localStorage.clear();
+  }
 });
 
 function emitWsMessage(data: unknown) {
@@ -160,20 +169,30 @@ describe("useTipStream", () => {
   it("falls back to polling when websocket errors", async () => {
     const amount = 5000n;
     const timestamp = 300n;
-    const fetchMock = vi.fn().mockResolvedValue({
-      json: async () => ({
-        result: [
-          buildLog({
-            from: "0x9999999999999999999999999999999999999999",
-            amount,
-            note: "fallback",
-            timestamp,
-            blockNumber: 100n,
-            txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            logIndex: 1n,
-          }),
-        ],
-      }),
+    const fallbackLog = buildLog({
+      from: "0x9999999999999999999999999999999999999999",
+      amount,
+      note: "fallback",
+      timestamp,
+      blockNumber: 100n,
+      txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      logIndex: 1n,
+    });
+
+    const fetchMock = vi.fn().mockImplementation(async (_input, init) => {
+      const body = JSON.parse((init?.body as string) ?? "{}");
+      switch (body.method) {
+        case "eth_blockNumber":
+          return {
+            json: async () => ({ result: "0x64" }),
+          };
+        case "eth_getLogsWithCursor":
+          return {
+            json: async () => ({ result: { logs: [fallbackLog], cursor: null } }),
+          };
+        default:
+          throw new Error(`Unexpected RPC method ${body.method}`);
+      }
     });
     globalThis.fetch = fetchMock;
 
@@ -197,5 +216,116 @@ describe("useTipStream", () => {
     expect(result.current.status).toBe("polling");
     expect(result.current.tips).toHaveLength(1);
     expect(result.current.tips[0].note).toBe("fallback");
+    expect(result.current.error).toBeNull();
+  });
+
+  it("skips websocket and throttles polling when cautious mode is active", async () => {
+    process.env.NEXT_PUBLIC_TRANSPORT_SLIDER_MODE = "active-default";
+
+    const fallbackLog = buildLog({
+      from: "0x7777777777777777777777777777777777777777",
+      amount: 1n,
+      note: "cautious",
+      timestamp: 400n,
+      blockNumber: 150n,
+      txHash: "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      logIndex: 2n,
+    });
+
+    const fetchMock = vi.fn().mockImplementation(async (_input, init) => {
+      const body = JSON.parse((init?.body as string) ?? "{}");
+      switch (body.method) {
+        case "eth_blockNumber":
+          return {
+            json: async () => ({ result: "0x96" }),
+          };
+        case "eth_getLogsWithCursor":
+          return {
+            json: async () => ({ result: { logs: [fallbackLog], cursor: null } }),
+          };
+        default:
+          throw new Error(`Unexpected RPC method ${body.method}`);
+      }
+    });
+    globalThis.fetch = fetchMock;
+
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <TransportControlsProvider>{children}</TransportControlsProvider>
+    );
+
+    const { result } = renderHook(
+      () =>
+        useTipStream({
+          contractAddress,
+          pollingIntervalMs: 1000,
+          maxWebSocketRetries: 2,
+        }),
+      { wrapper },
+    );
+
+    await act(async () => {
+      vi.runOnlyPendingTimers();
+      await Promise.resolve();
+    });
+
+    expect(MockWebSocket.instances).toHaveLength(0);
+    expect(result.current.status).toBe("polling");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://example-rpc",
+      expect.objectContaining({
+        method: "POST",
+      }),
+    );
+    expect(result.current.tips[0]).toMatchObject({ note: "cautious" });
+  });
+
+  it("falls back to polling when subscription returns an error", async () => {
+    const fetchMock = vi.fn().mockImplementation(async (_input, init) => {
+      const body = JSON.parse((init?.body as string) ?? "{}");
+      switch (body.method) {
+        case "eth_blockNumber":
+          return {
+            json: async () => ({ result: "0x64" }),
+          };
+        case "eth_getLogsWithCursor":
+          return {
+            json: async () => ({ result: { logs: [], cursor: null } }),
+          };
+        default:
+          throw new Error(`Unexpected RPC method ${body.method}`);
+      }
+    });
+    globalThis.fetch = fetchMock;
+
+    const { result } = renderHook(() =>
+      useTipStream({ contractAddress, pollingIntervalMs: 1000, maxWebSocketRetries: 1 }),
+    );
+
+    const instance = MockWebSocket.instances[0];
+
+    act(() => {
+      instance.onopen?.(new Event("open"));
+    });
+
+    const sentPayload = instance.sentMessages.at(-1);
+    const subscriptionId = sentPayload ? JSON.parse(sentPayload).id : undefined;
+
+    await act(async () => {
+      emitWsMessage({
+        jsonrpc: "2.0",
+        id: subscriptionId,
+        error: { code: -32601, message: "Method not found" },
+      });
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1100);
+      await Promise.resolve();
+    });
+
+    expect(fetchMock).toHaveBeenCalled();
+    expect(result.current.status).toBe("polling");
+    expect(result.current.error).toBeNull();
   });
 });

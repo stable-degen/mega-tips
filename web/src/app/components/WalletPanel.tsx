@@ -1,26 +1,103 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount, useBalance, useDisconnect } from "wagmi";
 
 import { megaEthTestnet } from "@/lib/chains";
 import { truncateAddress } from "@/lib/strings";
 
+const BALANCE_CACHE_PREFIX = "megatip:wallet-balance:";
+
+function getRateLimitDelay(error: unknown): number | null {
+  if (!(error instanceof Error)) return null;
+  const retryMatch = /retry in\s+(\d+)\s*seconds?/i.exec(error.message);
+  if (retryMatch) {
+    const seconds = Number.parseInt(retryMatch[1] ?? "", 10);
+    if (Number.isFinite(seconds) && seconds > 0) {
+      return seconds * 1000;
+    }
+  }
+
+  if (/429|rate limit|compute unit/i.test(error.message)) {
+    return 30_000;
+  }
+
+  return null;
+}
+
 export function WalletPanel() {
   const { address, isConnected } = useAccount();
   const { disconnect, isPending: isDisconnecting } = useDisconnect();
+  const [isClient, setIsClient] = useState(false);
+  const [cachedBalance, setCachedBalance] = useState<string | null>(null);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsClient(true);
+  }, []);
+
   const {
     data: balance,
     isFetching: isBalanceRefreshing,
+    error: balanceError,
   } = useBalance({
     address,
     chainId: megaEthTestnet.id,
     query: {
       enabled: Boolean(address),
-      refetchOnWindowFocus: true,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: "always",
+      retry: (failureCount, error) => {
+        if (failureCount >= 5) return false;
+        if (error instanceof Error && /invalid|not found/i.test(error.message)) {
+          return false;
+        }
+        return true;
+      },
+      retryDelay: (attemptIndex, error) => {
+        const rateLimitDelay = getRateLimitDelay(error);
+        if (rateLimitDelay !== null) {
+          return rateLimitDelay;
+        }
+        const baseDelay = 1000 * 2 ** attemptIndex;
+        return Math.min(baseDelay, 30_000);
+      },
     },
   });
+
+  useEffect(() => {
+    if (!isClient) return;
+
+    if (!address) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCachedBalance(null);
+      return;
+    }
+
+    const storageKey = `${BALANCE_CACHE_PREFIX}${address.toLowerCase()}`;
+
+    if (balance) {
+      const symbol = balance.symbol ?? megaEthTestnet.nativeCurrency.symbol;
+      const value = `${balance.formatted} ${symbol}`;
+      setCachedBalance(value);
+      try {
+        window.localStorage.setItem(storageKey, value);
+      } catch {
+        // Ignore storage write failures (private browsing, etc.).
+      }
+      return;
+    }
+
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      if (stored) {
+        setCachedBalance(stored);
+      }
+    } catch {
+      // Ignore storage read failures (private browsing, etc.).
+    }
+  }, [address, balance, isClient]);
 
   const explorerUrl = useMemo(() => {
     if (!address) return undefined;
@@ -33,6 +110,34 @@ export function WalletPanel() {
     return `${explorerBase.replace(/\/$/, "")}/address/${address}`;
   }, [address]);
 
+  const balanceDisplay = useMemo(() => {
+    if (!isClient) return "—";
+
+    if (balance) {
+      const symbol = balance.symbol ?? megaEthTestnet.nativeCurrency.symbol;
+      return `${balance.formatted} ${symbol}`;
+    }
+
+    if (isBalanceRefreshing) {
+      return "Refreshing...";
+    }
+
+    if (cachedBalance) {
+      return cachedBalance;
+    }
+
+    if (balanceError instanceof Error) {
+      if (/429|rate limit|compute unit/i.test(balanceError.message)) {
+        return "Rate limited - retrying";
+      }
+      return "Balance unavailable";
+    }
+
+    return "—";
+  }, [balance, balanceError, cachedBalance, isBalanceRefreshing, isClient]);
+
+  const hasWalletDetails = Boolean(isClient && isConnected && address);
+
   return (
     <section className="grid gap-4 rounded-3xl border border-white/10 bg-black/30 p-6 text-sm text-slate-200 backdrop-blur">
       <header className="flex items-center justify-between">
@@ -41,7 +146,7 @@ export function WalletPanel() {
             Wallet
           </p>
           <p className="text-base font-semibold text-slate-100">
-            {isConnected && address
+            {hasWalletDetails && address
               ? truncateAddress(address)
               : "Not connected"}
           </p>
@@ -53,7 +158,7 @@ export function WalletPanel() {
         Once paired, you can fire off tips, watch the live feed, and check
         stats--all without refreshing.
       </p>
-      {isConnected && (
+      {hasWalletDetails && (
         <div className="grid gap-4 rounded-2xl border border-white/5 bg-white/5 p-4 text-xs text-slate-200">
           <dl className="flex items-baseline justify-between gap-4">
             <div className="space-y-1">
@@ -62,11 +167,7 @@ export function WalletPanel() {
                 className="text-lg font-semibold text-white"
                 data-testid="wallet-balance-value"
               >
-                {balance
-                  ? `${balance.formatted} ${balance.symbol ?? megaEthTestnet.nativeCurrency.symbol}`
-                  : isBalanceRefreshing
-                    ? "Refreshing..."
-                    : "0"}
+                {balanceDisplay}
               </dd>
             </div>
             <button

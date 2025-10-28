@@ -26,6 +26,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
 
 import { megaEthTestnet } from "@/lib/chains";
+import { TransportControlsProvider } from "@/lib/transportControls";
 import { createQueryClient, createWagmiConfig } from "@/lib/wagmi";
 
 type ProvidersProps = {
@@ -47,16 +48,18 @@ export default function Providers({ children }: ProvidersProps) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider
-          modalSize="compact"
-          initialChain={megaEthTestnet}
-          theme={theme}
-          appInfo={{
-            appName: "MegaTip",
-          }}
-        >
-          {children}
-        </RainbowKitProvider>
+        <TransportControlsProvider>
+          <RainbowKitProvider
+            modalSize="compact"
+            initialChain={megaEthTestnet}
+            theme={theme}
+            appInfo={{
+              appName: "MegaTip",
+            }}
+          >
+            {children}
+          </RainbowKitProvider>
+        </TransportControlsProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

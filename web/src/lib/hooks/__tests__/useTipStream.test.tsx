@@ -219,13 +219,13 @@ describe("useTipStream", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("skips websocket and throttles polling when cautious mode is active", async () => {
+  it("skips websocket and throttles polling when throttled mode is active", async () => {
     process.env.NEXT_PUBLIC_TRANSPORT_SLIDER_MODE = "active-default";
 
     const fallbackLog = buildLog({
       from: "0x7777777777777777777777777777777777777777",
       amount: 1n,
-      note: "cautious",
+      note: "throttled",
       timestamp: 400n,
       blockNumber: 150n,
       txHash: "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
@@ -276,7 +276,7 @@ describe("useTipStream", () => {
         method: "POST",
       }),
     );
-    expect(result.current.tips[0]).toMatchObject({ note: "cautious" });
+    expect(result.current.tips[0]).toMatchObject({ note: "throttled" });
   });
 
   it("falls back to polling when subscription returns an error", async () => {

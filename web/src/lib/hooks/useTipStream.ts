@@ -12,8 +12,8 @@ import { tipJarAbi } from "@/lib/abis/TipJar";
 import { useTransportControls } from "@/lib/transportControls";
 
 const DEFAULT_POLL_INTERVAL_MS = 10_000;
-const CAUTIOUS_POLL_INTERVAL_MS = 60_000;
-const CAUTIOUS_INITIAL_LOOKBACK_BLOCKS = BigInt(4_096);
+const THROTTLED_POLL_INTERVAL_MS = 60_000;
+const THROTTLED_INITIAL_LOOKBACK_BLOCKS = BigInt(4_096);
 const MAX_TIP_HISTORY = 200;
 const DEFAULT_MAX_WS_RETRIES = 1;
 const MAX_BLOCK_WINDOW = BigInt(50_000);
@@ -105,12 +105,12 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
   } = options;
 
   const { mode } = useTransportControls();
-  const isCautious = mode === "cautious";
-  const effectivePollingIntervalMs = isCautious
-    ? Math.max(basePollingIntervalMs, CAUTIOUS_POLL_INTERVAL_MS)
+  const isThrottled = mode === "throttled";
+  const effectivePollingIntervalMs = isThrottled
+    ? Math.max(basePollingIntervalMs, THROTTLED_POLL_INTERVAL_MS)
     : basePollingIntervalMs;
-  const effectiveMaxWebSocketRetries = isCautious ? 0 : baseMaxWebSocketRetries;
-  const effectiveMaxCursorLoops = isCautious ? 1 : MAX_CURSOR_LOOPS;
+  const effectiveMaxWebSocketRetries = isThrottled ? 0 : baseMaxWebSocketRetries;
+  const effectiveMaxCursorLoops = isThrottled ? 1 : MAX_CURSOR_LOOPS;
 
   const envAddress =
     (process.env.NEXT_PUBLIC_TIPJAR_ADDRESS ??
@@ -252,25 +252,25 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
   }, []);
 
   const ensureFromBlock = useCallback(async (): Promise<string> => {
-    const cautious = mode === "cautious";
+    const throttledMode = isThrottled;
 
     if (fromBlockRef.current && fromBlockRef.current !== "latest") {
       return fromBlockRef.current;
     }
 
-    if (cautious) {
+    if (throttledMode) {
       if (!fromBlockRef.current || fromBlockRef.current === "latest") {
         try {
           const latestHex = await callRpc<string>("eth_blockNumber", []);
           const latest = latestHex ? BigInt(latestHex) : BigInt(0);
           const windowStart =
-            latest > CAUTIOUS_INITIAL_LOOKBACK_BLOCKS
-              ? latest - CAUTIOUS_INITIAL_LOOKBACK_BLOCKS + BigInt(1)
+            latest > THROTTLED_INITIAL_LOOKBACK_BLOCKS
+              ? latest - THROTTLED_INITIAL_LOOKBACK_BLOCKS + BigInt(1)
               : BigInt(0);
           fromBlockRef.current = toHex(windowStart);
           lastBlockWindowRefreshRef.current = Date.now();
         } catch (err) {
-          console.warn("Failed to seed cautious polling window", err);
+          console.warn("Failed to seed throttled polling window", err);
           fromBlockRef.current = "latest";
         }
       }
@@ -302,10 +302,10 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
       }
       return fromBlockRef.current ?? "latest";
     }
-  }, [callRpc, mode]);
+  }, [callRpc, isThrottled]);
 
   const fetchLogs = useCallback(async (): Promise<number> => {
-    const cautious = isCautious;
+    const throttledMode = isThrottled;
     let nextDelay = effectivePollingIntervalMs;
 
     if (!contractAddress || !httpRpcUrl || cancelledRef.current) {
@@ -386,7 +386,7 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
       }
       const now = Date.now();
       if (
-        !cautious &&
+        !throttledMode &&
         (now - lastBlockWindowRefreshRef.current > BLOCK_REFRESH_INTERVAL_MS ||
           !fromBlockRef.current ||
           fromBlockRef.current === "latest")
@@ -452,7 +452,7 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
     effectivePollingIntervalMs,
     ensureFromBlock,
     httpRpcUrl,
-    isCautious,
+    isThrottled,
     topics,
   ]);
 
@@ -541,7 +541,7 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
       stopWebSocket();
 
       if (
-        isCautious ||
+        isThrottled ||
         effectiveMaxWebSocketRetries <= 0 ||
         !realtimeWsUrl ||
         typeof WebSocket === "undefined"
@@ -664,7 +664,7 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
     contractAddress,
     effectiveMaxWebSocketRetries,
     httpRpcUrl,
-    isCautious,
+    isThrottled,
     realtimeWsUrl,
     startPolling,
     stopPolling,

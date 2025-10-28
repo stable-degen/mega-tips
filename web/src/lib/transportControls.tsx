@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 
-type TransportMode = "normal" | "cautious";
+type TransportMode = "normal" | "throttled";
 
 type SliderFlag = "hidden" | "active-default" | "disabled-default";
 
@@ -54,13 +54,16 @@ export function TransportControlsProvider({ children }: { children: ReactNode })
   );
 
   const sliderVisible = sliderFlag !== "hidden";
-  const defaultMode: TransportMode = sliderFlag === "active-default" ? "cautious" : "normal";
+  const defaultMode: TransportMode = sliderFlag === "active-default" ? "throttled" : "normal";
 
   const [modeState, setModeState] = useState<TransportMode>(() => {
     if (!sliderVisible) return defaultMode;
     if (typeof window === "undefined") return defaultMode;
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    return stored === "cautious" || stored === "normal" ? stored : defaultMode;
+    if (stored === "cautious") {
+      return "throttled";
+    }
+    return stored === "throttled" || stored === "normal" ? (stored as TransportMode) : defaultMode;
   });
 
   useEffect(() => {

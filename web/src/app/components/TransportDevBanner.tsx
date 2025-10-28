@@ -9,10 +9,10 @@ export function TransportDevBanner() {
     return null;
   }
 
-  const isCautious = mode === "cautious";
+  const isThrottled = mode === "throttled";
 
-  const statusCopy = isCautious
-    ? "Cautious polling keeps MegaETH under 10 req/min and skips realtime websockets."
+  const statusCopy = isThrottled
+    ? "Throttled polling keeps MegaETH under the limit and skips realtime websockets."
     : "Normal streaming enables websockets and standard polling fallback.";
 
   let defaultLabel = "Hidden";
@@ -23,7 +23,7 @@ export function TransportDevBanner() {
   }
 
   const toggle = () => {
-    setMode(isCautious ? "normal" : "cautious");
+    setMode(isThrottled ? "normal" : "throttled");
   };
 
   return (
@@ -41,15 +41,15 @@ export function TransportDevBanner() {
         <button
           type="button"
           role="switch"
-          aria-checked={isCautious}
+          aria-checked={isThrottled}
           onClick={toggle}
           className="group inline-flex items-center gap-3 rounded-full border border-amber-300/40 bg-amber-950/60 px-4 py-2 text-xs uppercase tracking-[0.3em] transition hover:border-amber-200 hover:text-amber-100"
         >
-          <span>{isCautious ? "Cautious" : "Normal"}</span>
+          <span>{isThrottled ? "Throttled" : "Normal"}</span>
           <span
             aria-hidden
             className={`relative inline-flex h-6 w-11 items-center rounded-full border border-amber-200/60 bg-amber-950 px-1 transition-all ${
-              isCautious ? "justify-end bg-amber-400/40" : "justify-start bg-amber-800/60"
+              isThrottled ? "justify-end bg-amber-400/40" : "justify-start bg-amber-800/60"
             }`}
           >
             <span className="inline-block h-5 w-5 rounded-full bg-amber-100 shadow transition-transform" />

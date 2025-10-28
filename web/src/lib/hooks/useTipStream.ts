@@ -12,7 +12,7 @@ import { tipJarAbi } from "@/lib/abis/TipJar";
 import { useTransportControls } from "@/lib/transportControls";
 
 const DEFAULT_POLL_INTERVAL_MS = 10_000;
-const CAUTIOUS_POLL_INTERVAL_MS = 20_000;
+const CAUTIOUS_POLL_INTERVAL_MS = 60_000;
 const MAX_TIP_HISTORY = 200;
 const DEFAULT_MAX_WS_RETRIES = 1;
 const MAX_BLOCK_WINDOW = BigInt(50_000);
@@ -252,7 +252,14 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
 
   const ensureFromBlock = useCallback(async (): Promise<string> => {
     if (fromBlockRef.current === "latest") {
-      return fromBlockRef.current;
+      return "latest";
+    }
+
+    if (isCautious) {
+      if (!fromBlockRef.current) {
+        fromBlockRef.current = "latest";
+      }
+      return fromBlockRef.current ?? "latest";
     }
 
     if (Date.now() < nextAllowedPollRef.current && fromBlockRef.current) {
@@ -278,9 +285,9 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
       if (!fromBlockRef.current) {
         fromBlockRef.current = "latest";
       }
-      return fromBlockRef.current;
+      return fromBlockRef.current ?? "latest";
     }
-  }, [callRpc]);
+  }, [callRpc, isCautious]);
 
   const fetchLogs = useCallback(async (): Promise<number> => {
     let nextDelay = effectivePollingIntervalMs;
@@ -363,9 +370,10 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
       }
       const now = Date.now();
       if (
-        now - lastBlockWindowRefreshRef.current > BLOCK_REFRESH_INTERVAL_MS ||
-        !fromBlockRef.current ||
-        fromBlockRef.current === "latest"
+        !isCautious &&
+        (now - lastBlockWindowRefreshRef.current > BLOCK_REFRESH_INTERVAL_MS ||
+          !fromBlockRef.current ||
+          fromBlockRef.current === "latest")
       ) {
         try {
           const latestHex = await callRpc<string>("eth_blockNumber", []);
@@ -400,7 +408,7 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
         if (retryMatch) {
           const seconds = Number.parseInt(retryMatch[1] ?? "", 10);
           if (Number.isFinite(seconds) && seconds > 0) {
-            nextDelay = Math.max(seconds * 1000, effectivePollingIntervalMs);
+            nextDelay = Math.max(seconds * 1000 + 2000, effectivePollingIntervalMs);
           }
           nextAllowedPollRef.current = Date.now() + nextDelay;
           pollFailuresRef.current = 0;
@@ -428,6 +436,7 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
     effectivePollingIntervalMs,
     ensureFromBlock,
     httpRpcUrl,
+    isCautious,
     topics,
   ]);
 
@@ -443,7 +452,7 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
     setError(null);
     pollFailuresRef.current = 0;
     cursorRef.current = null;
-    fromBlockRef.current = null;
+    fromBlockRef.current = isCautious ? "latest" : null;
     nextAllowedPollRef.current = Date.now();
     lastBlockWindowRefreshRef.current = 0;
 
@@ -461,7 +470,7 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
     };
 
     void tick();
-  }, [fetchLogs, httpRpcUrl, stopWebSocket]);
+  }, [fetchLogs, httpRpcUrl, isCautious, stopWebSocket]);
 
   useEffect(() => {
     if (!contractAddress) {

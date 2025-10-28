@@ -45,6 +45,13 @@ To run the smart-contract test suite:
 
 > **Heads up:** The public MegaETH faucet is throttled while the network onboards builders. If the faucet UI says “success” but your account still reads 0 MEGA on [OKX MegaETH Explorer](https://www.okx.com/web3/explorer/megaeth-testnet), ping the MegaETH Discord for a manual top-up before redeploying.
 
+### Live Deployment (MegaETH Testnet)
+- **Contract:** [`0x41c398E8d5eD8d117E71F1E6eeDc0Bf53Dd8398D`](https://www.okx.com/web3/explorer/megaeth-testnet/address/0x41c398E8d5eD8d117E71F1E6eeDc0Bf53Dd8398D)
+- **Deploy tx:** [`0xc7b05e54c8915946c6c90cbbdc741e787769902994c61a4c64668eb0ae5bd423`](https://www.okx.com/web3/explorer/megaeth-testnet/tx/0xc7b05e54c8915946c6c90cbbdc741e787769902994c61a4c64668eb0ae5bd423)
+- **Owner:** `0x7d0975a570aFfFcC28346c26E9fA13C3Ca4F3ED9`
+
+You can also query the contract on MegaExplorer: [`https://www.megaexplorer.xyz/address/0x41c398E8d5eD8d117E71F1E6eeDc0Bf53Dd8398D`](https://www.megaexplorer.xyz/address/0x41c398E8d5eD8d117E71F1E6eeDc0Bf53Dd8398D)
+
 ## Frontend Development
 - Main entry point: `web/src/app/page.tsx`
 - Components: `web/src/app/components/`

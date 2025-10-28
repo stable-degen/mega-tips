@@ -13,6 +13,7 @@ import { useTransportControls } from "@/lib/transportControls";
 
 const DEFAULT_POLL_INTERVAL_MS = 10_000;
 const CAUTIOUS_POLL_INTERVAL_MS = 60_000;
+const CAUTIOUS_INITIAL_LOOKBACK_BLOCKS = BigInt(4_096);
 const MAX_TIP_HISTORY = 200;
 const DEFAULT_MAX_WS_RETRIES = 1;
 const MAX_BLOCK_WINDOW = BigInt(50_000);
@@ -251,13 +252,27 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
   }, []);
 
   const ensureFromBlock = useCallback(async (): Promise<string> => {
-    if (fromBlockRef.current === "latest") {
-      return "latest";
+    const cautious = mode === "cautious";
+
+    if (fromBlockRef.current && fromBlockRef.current !== "latest") {
+      return fromBlockRef.current;
     }
 
-    if (isCautious) {
-      if (!fromBlockRef.current) {
-        fromBlockRef.current = "latest";
+    if (cautious) {
+      if (!fromBlockRef.current || fromBlockRef.current === "latest") {
+        try {
+          const latestHex = await callRpc<string>("eth_blockNumber", []);
+          const latest = latestHex ? BigInt(latestHex) : BigInt(0);
+          const windowStart =
+            latest > CAUTIOUS_INITIAL_LOOKBACK_BLOCKS
+              ? latest - CAUTIOUS_INITIAL_LOOKBACK_BLOCKS + BigInt(1)
+              : BigInt(0);
+          fromBlockRef.current = toHex(windowStart);
+          lastBlockWindowRefreshRef.current = Date.now();
+        } catch (err) {
+          console.warn("Failed to seed cautious polling window", err);
+          fromBlockRef.current = "latest";
+        }
       }
       return fromBlockRef.current ?? "latest";
     }
@@ -287,9 +302,10 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
       }
       return fromBlockRef.current ?? "latest";
     }
-  }, [callRpc, isCautious]);
+  }, [callRpc, mode]);
 
   const fetchLogs = useCallback(async (): Promise<number> => {
+    const cautious = isCautious;
     let nextDelay = effectivePollingIntervalMs;
 
     if (!contractAddress || !httpRpcUrl || cancelledRef.current) {
@@ -370,7 +386,7 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
       }
       const now = Date.now();
       if (
-        !isCautious &&
+        !cautious &&
         (now - lastBlockWindowRefreshRef.current > BLOCK_REFRESH_INTERVAL_MS ||
           !fromBlockRef.current ||
           fromBlockRef.current === "latest")
@@ -452,7 +468,7 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
     setError(null);
     pollFailuresRef.current = 0;
     cursorRef.current = null;
-    fromBlockRef.current = isCautious ? "latest" : null;
+    fromBlockRef.current = null;
     nextAllowedPollRef.current = Date.now();
     lastBlockWindowRefreshRef.current = 0;
 
@@ -470,7 +486,7 @@ export function useTipStream(options: UseTipStreamOptions = {}): UseTipStreamSta
     };
 
     void tick();
-  }, [fetchLogs, httpRpcUrl, isCautious, stopWebSocket]);
+  }, [fetchLogs, httpRpcUrl, stopWebSocket]);
 
   useEffect(() => {
     if (!contractAddress) {
